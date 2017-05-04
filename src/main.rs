@@ -1,6 +1,6 @@
 extern crate toyjq;
 
-use toyjq::parser::*;
+use toyjq::*;
 
 fn main() {
     println!("{:?}", string("foo").parse("fooo").unwrap());

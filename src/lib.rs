@@ -1,2 +1,2 @@
-pub mod parser;
-pub use parser::*;
+pub mod parsercombinator;
+pub use parsercombinator::*;
