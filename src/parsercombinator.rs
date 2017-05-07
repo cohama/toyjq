@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
     pub retry: bool,
@@ -58,7 +57,7 @@ pub struct Parser<'a, T>(Box<Fn(StrStream<'a>) -> ParseResult<'a, T> + 'a>);
 /// Creates a new Parser which returns the specified value.
 ///
 /// ```
-/// # use toyjq::*;
+/// # use toyjq::parsercombinator::*;
 /// assert_eq!(unit(42).parse("").unwrap(), 42);
 /// ```
 pub fn unit<'a, T>(x: T) -> Parser<'a, T>
@@ -72,7 +71,7 @@ pub fn unit<'a, T>(x: T) -> Parser<'a, T>
 /// Parses literal string.
 ///
 /// ```
-/// # use toyjq::*;
+/// # use toyjq::parsercombinator::*;
 /// assert_eq!(string("foo").parse("fooo").unwrap(), "foo");
 /// ```
 pub fn string<'a>(s: &'static str) -> Parser<'a, &'static str> {
@@ -100,7 +99,7 @@ pub fn string<'a>(s: &'static str) -> Parser<'a, &'static str> {
 /// Parsers single character.
 ///
 /// ```
-/// # use toyjq::*;
+/// # use toyjq::parsercombinator::*;
 /// assert_eq!(chr('f').parse("foo").unwrap(), 'f');
 /// ```
 pub fn chr<'a>(c: char) -> Parser<'a, char> {
@@ -125,7 +124,7 @@ pub fn chr<'a>(c: char) -> Parser<'a, char> {
 }
 
 /// ```
-/// # use toyjq::*;
+/// # use toyjq::parsercombinator::*;
 /// assert_eq!(failure(format!("failed")).parse("").unwrap_err().message, "failed");
 /// ```
 pub fn failure<'a>(message: String) -> Parser<'a, ()> {
@@ -141,7 +140,7 @@ pub fn failure<'a>(message: String) -> Parser<'a, ()> {
 /// Parses any string till the specified string appears.
 ///
 /// ```
-/// # use toyjq::*;
+/// # use toyjq::parsercombinator::*;
 /// assert_eq!(until("!").parse("foo bar!").unwrap(), "foo bar");
 /// ```
 pub fn until<'a>(s: &'a str) -> Parser<'a, &'a str> {
@@ -167,7 +166,7 @@ pub fn until<'a>(s: &'a str) -> Parser<'a, &'a str> {
 /// Chains `or` opeartion
 ///
 /// ```
-/// # use toyjq::*;
+/// # use toyjq::parsercombinator::*;
 /// assert_eq!(or_from("abcdef".chars().map(chr)).parse("fff").unwrap(), 'f');
 /// ```
 pub fn or_from<'a, T, Ps>(ps: Ps) -> Parser<'a, T>
@@ -200,7 +199,7 @@ impl <'a, T> Parser<'a, T>
     }
 
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(unit(42).map(|x|x+1).parse("").unwrap(), 43);
     /// ```
     pub fn map<F, U>(self, f: F) -> Parser<'a, U>
@@ -216,7 +215,7 @@ impl <'a, T> Parser<'a, T>
     /// Like `map` but do not use former result.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(unit(42).map_(1).parse("").unwrap(), 1);
     /// ```
     pub fn map_<U>(self, x: U) -> Parser<'a, U>
@@ -229,7 +228,7 @@ impl <'a, T> Parser<'a, T>
     }
 
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(unit('f').flat_map(chr).parse("foo").unwrap(), 'f');
     /// ```
     pub fn flat_map<F, U>(self, f: F) -> Parser<'a, U>
@@ -246,7 +245,7 @@ impl <'a, T> Parser<'a, T>
     /// First, parses p1 but abandons its result and then parses p2.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(chr('[').then(string("foo")).parse("[foo]").unwrap(), "foo");
     /// ```
     pub fn then<U>(self, p: Parser<'a, U>) -> Parser<'a, U>
@@ -261,7 +260,7 @@ impl <'a, T> Parser<'a, T>
     /// Like then but be lazy.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(chr('[').then_lazy(||string("foo")).parse("[foo]").unwrap(), "foo");
     /// ```
     pub fn then_lazy<F, U>(self, f: F) -> Parser<'a, U>
@@ -272,7 +271,7 @@ impl <'a, T> Parser<'a, T>
     }
 
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(string("foo").skip(chr(';')).parse("foo;").unwrap(), "foo");
     /// ```
     pub fn skip<U>(self, p: Parser<'a, U>) -> Parser<'a, T>
@@ -290,7 +289,7 @@ impl <'a, T> Parser<'a, T>
     /// parse both p1 and p2 and make tuple from these results.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(chr('[').and(string("foo")).parse("[foo]").unwrap(), ('[', "foo"));
     /// ```
     pub fn and<U>(self, p: Parser<'a, U>) -> Parser<'a, (T, U)>
@@ -307,7 +306,7 @@ impl <'a, T> Parser<'a, T>
     /// Like and but be lazy.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(chr('[').and_lazy(||string("foo")).parse("[foo]").unwrap(), ('[', "foo"));
     /// ```
     pub fn and_lazy<F, U>(self, f: F) -> Parser<'a, (T, U)>
@@ -326,7 +325,7 @@ impl <'a, T> Parser<'a, T>
     /// when p1 is failed and retry flag is true, then p2 will run.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(string("foo").try().or(string("bar")).parse("bar").unwrap(), "bar");
     /// ```
     pub fn or(self, that: Self) -> Self {
@@ -342,7 +341,7 @@ impl <'a, T> Parser<'a, T>
     /// Like `or` but be lazy.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(string("foo").try().or_lazy(||string("bar")).parse("bar").unwrap(), "bar");
     /// ```
     pub fn or_lazy<F>(self, that: F) -> Self
@@ -360,7 +359,7 @@ impl <'a, T> Parser<'a, T>
     /// Parses optional phrase.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// let p = chr('-').or_not().and(string("123"));
     /// assert_eq!(p.parse("-123").unwrap(), (Some('-'), "123"));
     /// assert_eq!(p.parse("123").unwrap(), (None, "123"));
@@ -377,7 +376,7 @@ impl <'a, T> Parser<'a, T>
     /// Parsing with backtracking.
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert!(string("foo").or(string("bar")).parse("bar").is_err());
     /// assert_eq!(string("foo").try().or(string("bar")).parse("bar").unwrap(), "bar");
     /// ```
@@ -392,7 +391,7 @@ impl <'a, T> Parser<'a, T>
     /// Parses any phrase repeatedly (0 or more)
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(string("foo").many().parse("foofoofoo").unwrap(), vec!["foo", "foo", "foo"]);
     /// ```
     pub fn many(self) -> Parser<'a, Vec<T>> {
@@ -415,7 +414,7 @@ impl <'a, T> Parser<'a, T>
     /// Parses any phrase separated by delimitor repeatedly (0 or more).
     ///
     /// ```
-    /// # use toyjq::*;
+    /// # use toyjq::parsercombinator::*;
     /// assert_eq!(string("foo").sep_by(string(", ")).parse("foo, foo, foo").unwrap(), vec!["foo", "foo", "foo"]);
     /// ```
     pub fn sep_by<O2>(self, delim: Parser<'a, O2>) -> Parser<'a, Vec<T>>

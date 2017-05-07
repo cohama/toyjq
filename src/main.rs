@@ -1,7 +1,6 @@
 extern crate toyjq;
 
 use toyjq::*;
-use toyjq::jsonparser::*;
 
 use std::io;
 use std::io::*;
