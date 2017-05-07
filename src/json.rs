@@ -11,7 +11,17 @@ pub enum Json<'a> {
     JObject(Vec<(&'a str, Json<'a>)>) // To preserve input order, use Vec instead of HashMap
 }
 
-pub fn parse_json<'a>() -> Parser<'a, Json<'a>> {
+impl <'a> Json<'a> {
+    pub fn from_str(s: &str) -> Result<Json, ParseError> {
+        parse_json().parse(s)
+    }
+
+    pub fn pretty_print(&self, width: i32) -> String {
+        Doc::new(vec![json_to_doc_elem(&self)]).pretty(width)
+    }
+}
+
+fn parse_json<'a>() -> Parser<'a, Json<'a>> {
     parse_jarray()
         .or_lazy(||parse_jobject())
         .or_lazy(||parse_jstring())
@@ -66,10 +76,6 @@ fn parse_jarray<'a>() -> Parser<'a, Json<'a>> {
 }
 
 const INDENT_DEPTH: i32 = 2;
-
-pub fn print_json(json: &Json, width: i32) -> String {
-    Doc::new(vec![json_to_doc_elem(json)]).pretty(width)
-}
 
 fn json_to_doc_elem(json: &Json) -> DocElem {
     match *json {
@@ -134,7 +140,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_print_json() {
+    fn test_json_pretty_print() {
         use self::Json::*;
         let json = JArray(vec![
             JNumber(42f64),
@@ -152,7 +158,7 @@ mod tests {
             ])
         ]);
         assert_eq! {
-            print_json(&json, 1),
+            json.pretty_print(1),
             r#"[
   42,
   "foo",
@@ -194,7 +200,7 @@ mod tests {
 ]"#
         }
         assert_eq! {
-            print_json(&json, 84),
+            json.pretty_print(84),
             r#"[
   42,
   "foo",
@@ -212,7 +218,7 @@ mod tests {
 ]"#
         }
         assert_eq! {
-            print_json(&json, 215),
+            json.pretty_print(215),
             r#"[ 42, "foo", true, false, [], [ null ], {}, { "poem": "Lorem ipsum" }, { "a": 1, "foo-bar-baz": "1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz", "Numbers": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ] } ]"#
         }
     }
@@ -220,15 +226,15 @@ mod tests {
     #[test]
     fn test_parse_json() {
         assert_eq! {
-            parse_json().parse("123").unwrap(),
+            Json::from_str("123").unwrap(),
             Json::JNumber(123f64)
         }
         assert_eq! {
-            parse_json().parse("\"fooo\"").unwrap(),
+            Json::from_str("\"fooo\"").unwrap(),
             Json::JString("fooo")
         }
         assert_eq! {
-            parse_json().parse("[1, -2, 3.0E4, true, false, null]").unwrap(),
+            Json::from_str("[1, -2, 3.0E4, true, false, null]").unwrap(),
             Json::JArray(vec! {
                 Json::JNumber(1f64),
                 Json::JNumber(-2f64),
@@ -239,14 +245,14 @@ mod tests {
             })
         }
         assert_eq! {
-            parse_json().parse("{\"key1\" : 123, \"key2\" : \"foo\"}").unwrap(),
+            Json::from_str("{\"key1\" : 123, \"key2\" : \"foo\"}").unwrap(),
             Json::JObject(vec! {
                 ("key1", Json::JNumber(123f64)),
                 ("key2", Json::JString("foo"))
             })
         }
         assert_eq! {
-            parse_json().parse("[{\"key1\" : 123, \"key2\" : \"foo\"}, 123, [\"foo\", true]]").unwrap(),
+            Json::from_str("[{\"key1\" : 123, \"key2\" : \"foo\"}, 123, [\"foo\", true]]").unwrap(),
             Json::JArray(vec! {
                 Json::JObject(vec! {
                     ("key1", Json::JNumber(123f64)),

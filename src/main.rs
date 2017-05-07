@@ -1,14 +1,14 @@
 extern crate toyjq;
 
-use toyjq::*;
+use toyjq::Json;
 
 use std::io;
 use std::io::*;
 
 fn main() {
     interact(|s| {
-        let json = parse_json().parse(s).unwrap();
-        print_json(&json, 80)
+        let json = Json::from_str(s).unwrap();
+        json.pretty_print(80)
     }).unwrap_or_else(|e| {
         println!("ERROR");
         println!("{:?}", e);
