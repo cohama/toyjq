@@ -87,8 +87,6 @@ mod tests {
                 ("Numbers", JArray((1..20).map(|i: i32| JNumber(i as f64)).collect()))
             ])
         ]);
-        println!("{}", print_json(&json, 1));
-        println!("{}", print_json(&json, 85));
         assert_eq! {
             print_json(&json, 1),
             r#"[
@@ -130,6 +128,28 @@ mod tests {
     ]
   }
 ]"#
+        }
+        assert_eq! {
+            print_json(&json, 84),
+            r#"[
+  42,
+  "foo",
+  true,
+  false,
+  [],
+  [ null ],
+  {},
+  { "poem": "Lorem ipsum" },
+  {
+    "a": 1,
+    "foo-bar-baz": "1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz",
+    "Numbers": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ]
+  }
+]"#
+        }
+        assert_eq! {
+            print_json(&json, 215),
+            r#"[ 42, "foo", true, false, [], [ null ], {}, { "poem": "Lorem ipsum" }, { "a": 1, "foo-bar-baz": "1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz", "Numbers": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ] } ]"#
         }
     }
 }
