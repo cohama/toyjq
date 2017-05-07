@@ -66,3 +66,72 @@ fn json_keyvalue_to_doc_elems(keyvalue: (&&str, &Json)) -> Vec<DocElem> {
         json_to_doc_elem(v)
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::iter::FromIterator;
+
+    #[test]
+    #[ignore]
+    fn test_print_json() {
+        use self::Json::*;
+        let json = JArray(vec![
+            JNumber(42f64),
+            JString("foo"),
+            JBool(true),
+            JBool(false),
+            JArray(vec![]),
+            JArray(vec![JNull]),
+            JObject(HashMap::new()),
+            JObject(HashMap::from_iter(vec![("poem", JString("Lorem ipsum"))])),
+            JObject(HashMap::from_iter(vec![
+                ("a", JNumber(1f64)),
+                ("foo-bar-baz", JString("1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz")),
+                ("Numbers", JArray((1..20).map(|i: i32| JNumber(i as f64)).collect()))
+            ]))
+        ]);
+        println!("{}", print_json(&json, 1));
+        println!("{}", print_json(&json, 85));
+        assert_eq! {
+            print_json(&json, 1),
+            r#"[
+  42,
+  "foo",
+  true,
+  false,
+  [],
+  [
+    null
+  ],
+  {},
+  { "poem": "Lorem ipsum" },
+  {
+    "foo-bar-baz": "1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz",
+    "Numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "a": 1
+  }
+"#
+        }
+    }
+}
