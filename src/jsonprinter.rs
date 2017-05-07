@@ -12,7 +12,7 @@ pub fn print_json(json: &Json, width: i32) -> String {
 fn json_to_doc_elem(json: &Json) -> DocElem {
     match *json {
         Json::JNumber(v) => text(format!("{}", v)),
-        Json::JString(s) => text(s.to_string()),
+        Json::JString(s) => text(format!("\"{}\"", s)),
         Json::JBool(true) => literal("true"),
         Json::JBool(false) => literal("false"),
         Json::JNull => literal("null"),
@@ -61,7 +61,7 @@ fn json_object_to_flatable_doc_elem(obj: &HashMap<&str, Json>) -> DocElem {
 fn json_keyvalue_to_doc_elems(keyvalue: (&&str, &Json)) -> Vec<DocElem> {
     let (k, v) = keyvalue;
     vec![
-        text(k.to_string()),
+        text(format!("\"{}\"", k)),
         literal(": "),
         json_to_doc_elem(v)
     ]
