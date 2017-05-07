@@ -1,8 +1,6 @@
 use super::jsonparser::*;
 use super::*;
 
-use std::collections::HashMap;
-
 const INDENT_DEPTH: i32 = 2;
 
 pub fn print_json(json: &Json, width: i32) -> String {
@@ -39,7 +37,7 @@ fn json_vec_to_flatable_doc_elem(jsons: &Vec<Json>) -> DocElem {
     }
 }
 
-fn json_object_to_flatable_doc_elem(obj: &HashMap<&str, Json>) -> DocElem {
+fn json_object_to_flatable_doc_elem(obj: &Vec<(&str, Json)>) -> DocElem {
     if obj.is_empty() {
         literal("{}")
     } else {
@@ -58,8 +56,8 @@ fn json_object_to_flatable_doc_elem(obj: &HashMap<&str, Json>) -> DocElem {
     }
 }
 
-fn json_keyvalue_to_doc_elems(keyvalue: (&&str, &Json)) -> Vec<DocElem> {
-    let (k, v) = keyvalue;
+fn json_keyvalue_to_doc_elems(keyvalue: &(&str, Json)) -> Vec<DocElem> {
+    let (ref k, ref v) = *keyvalue;
     vec![
         text(format!("\"{}\"", k)),
         literal(": "),
@@ -70,10 +68,8 @@ fn json_keyvalue_to_doc_elems(keyvalue: (&&str, &Json)) -> Vec<DocElem> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::iter::FromIterator;
 
     #[test]
-    #[ignore]
     fn test_print_json() {
         use self::Json::*;
         let json = JArray(vec![
@@ -83,13 +79,13 @@ mod tests {
             JBool(false),
             JArray(vec![]),
             JArray(vec![JNull]),
-            JObject(HashMap::new()),
-            JObject(HashMap::from_iter(vec![("poem", JString("Lorem ipsum"))])),
-            JObject(HashMap::from_iter(vec![
+            JObject(vec![]),
+            JObject(vec![("poem", JString("Lorem ipsum"))]),
+            JObject(vec![
                 ("a", JNumber(1f64)),
                 ("foo-bar-baz", JString("1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz")),
                 ("Numbers", JArray((1..20).map(|i: i32| JNumber(i as f64)).collect()))
-            ]))
+            ])
         ]);
         println!("{}", print_json(&json, 1));
         println!("{}", print_json(&json, 85));
@@ -105,8 +101,11 @@ mod tests {
     null
   ],
   {},
-  { "poem": "Lorem ipsum" },
   {
+    "poem": "Lorem ipsum"
+  },
+  {
+    "a": 1,
     "foo-bar-baz": "1 2 Fizz 4 Buzz 6 7 8 Fizz Buzz",
     "Numbers": [
       1,
@@ -128,10 +127,9 @@ mod tests {
       17,
       18,
       19
-    ],
-    "a": 1
+    ]
   }
-"#
+]"#
         }
     }
 }

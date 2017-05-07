@@ -1,6 +1,14 @@
 use super::*;
 
-use std::collections::HashMap;
+#[derive(Debug, PartialEq)]
+pub enum Json<'a> {
+    JNumber(f64),
+    JString(&'a str),
+    JBool(bool),
+    JNull,
+    JArray(Vec<Json<'a>>),
+    JObject(Vec<(&'a str, Json<'a>)>) // To preserve input order, use Vec instead of HashMap
+}
 
 pub fn parse_json<'a>() -> Parser<'a, Json<'a>> {
     parse_jarray()
@@ -56,21 +64,9 @@ fn parse_jarray<'a>() -> Parser<'a, Json<'a>> {
     ).skip(chr(']').with_spaces()).map(Json::JArray)
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Json<'a> {
-    JNumber(f64),
-    JString(&'a str),
-    JBool(bool),
-    JNull,
-    JArray(Vec<Json<'a>>),
-    JObject(HashMap<&'a str, Json<'a>>)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use std::iter::FromIterator;
 
     #[test]
     fn test_parse_json() {
@@ -95,18 +91,18 @@ mod tests {
         }
         assert_eq! {
             parse_json().parse("{\"key1\" : 123, \"key2\" : \"foo\"}").unwrap(),
-            Json::JObject(HashMap::from_iter(vec! {
+            Json::JObject(vec! {
                 ("key1", Json::JNumber(123f64)),
                 ("key2", Json::JString("foo"))
-            }))
+            })
         }
         assert_eq! {
             parse_json().parse("[{\"key1\" : 123, \"key2\" : \"foo\"}, 123, [\"foo\", true]]").unwrap(),
             Json::JArray(vec! {
-                Json::JObject(HashMap::from_iter(vec! {
+                Json::JObject(vec! {
                     ("key1", Json::JNumber(123f64)),
                     ("key2", Json::JString("foo"))
-                })),
+                }),
                 Json::JNumber(123f64),
                 Json::JArray(vec! {
                     Json::JString("foo"),
