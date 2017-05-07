@@ -35,20 +35,6 @@ impl <'a> StrStream<'a> {
     }
 }
 
-impl <'a> Into<StrStream<'a>> for &'a str {
-    fn into(self) -> StrStream<'a> {
-        StrStream::new(self)
-    }
-}
-
-impl <'a> Into<StrStream<'a>> for &'a String {
-    fn into(self) -> StrStream<'a> {
-        StrStream::new(self.as_str())
-    }
-}
-
-
-
 type ParseResult<'a, T> = Result<(StrStream<'a>, T), ParseError>;
 
 pub struct Parser<'a, T>(Box<Fn(StrStream<'a>) -> ParseResult<'a, T> + 'a>);
@@ -191,10 +177,9 @@ impl <'a, T> Parser<'a, T>
 
     /// Runs parser with the specified input.
     /// input type will be &str or &String. (these implement Into<StrStream>)
-    pub fn parse<S>(&self, input: S) -> Result<T, ParseError>
-        where S: Into<StrStream<'a>>
+    pub fn parse(&self, input: &'a str) -> Result<T, ParseError>
     {
-        let (_, v) = self.run(input.into())?;
+        let (_, v) = self.run(StrStream::new(input))?;
         Ok(v)
     }
 
