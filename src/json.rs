@@ -265,5 +265,12 @@ mod tests {
                 })
             })
         }
+        assert_eq! {
+            {
+                let ParseError {retry, message: _, pos} = Json::from_str("[[null, null ],[null ,null      null] , [ null ] ] ").unwrap_err();
+                (retry, pos)
+            },
+            (false, 26)
+        }
     }
 }

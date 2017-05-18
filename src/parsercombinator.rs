@@ -1,7 +1,8 @@
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
     pub retry: bool,
-    pub message: String
+    pub message: String,
+    pub pos: usize
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,14 +70,16 @@ pub fn string<'a>(s: &'static str) -> Parser<'a, &'static str> {
                 Ok((input.advance(len), s))
             } else {
                 Err(ParseError {
-                    retry: false,
-                    message: format!("Expected `{}` but actual is `{}`.", s, heads)
+                    retry: true,
+                    message: format!("Expected `{}` but actual is `{}`.", s, heads),
+                    pos: input.pos
                 })
             }
         } else {
             Err(ParseError {
-                retry: false,
-                message: "Reaches end.".to_string()
+                retry: true,
+                message: "Reaches end.".to_string(),
+                pos: input.pos
             })
         }
     }))
@@ -96,14 +99,16 @@ pub fn chr<'a>(c: char) -> Parser<'a, char> {
                 Ok((input.advance(1), c))
             } else {
                 Err(ParseError {
-                    retry: false,
-                    message: format!("Expected `{}` but actual is `{}`.", c, head)
+                    retry: true,
+                    message: format!("Expected `{}` but actual is `{}`.", c, head),
+                    pos: input.pos
                 })
             }
         } else {
             Err(ParseError {
-                retry: false,
-                message: "Reaches end.".to_string()
+                retry: true,
+                message: "Reaches end.".to_string(),
+                pos: input.pos
             })
         }
     }))
@@ -114,10 +119,11 @@ pub fn chr<'a>(c: char) -> Parser<'a, char> {
 /// assert_eq!(failure(format!("failed")).parse("").unwrap_err().message, "failed");
 /// ```
 pub fn failure<'a>(message: String) -> Parser<'a, ()> {
-    Parser(Box::new(move |_| {
+    Parser(Box::new(move |input| {
         Err(ParseError {
-            retry: false,
-            message: message.clone()
+            retry: true,
+            message: message.clone(),
+            pos: input.pos
         })
     }))
 }
@@ -142,8 +148,9 @@ pub fn until<'a>(s: &'a str) -> Parser<'a, &'a str> {
             }
         }
         Err(ParseError {
-            retry: false,
-            message: "Reaches end.".to_string()
+            retry: true,
+            message: "Reaches end.".to_string(),
+            pos: input.pos
         })
     }))
 }
@@ -221,8 +228,11 @@ impl <'a, T> Parser<'a, T>
               U: 'a
     {
         Parser(Box::new(move |input| {
-            let (input2, o) = try! { self.run(input) };
-            f(o).run(input2)
+            let (input2, o) = self.run(input)?;
+            let retry = input.pos == input2.pos;
+            f(o).run(input2).map_err(|ParseError {retry: _, message, pos}| {
+                ParseError {retry, message, pos}
+            })
         }))
     }
 
@@ -237,8 +247,11 @@ impl <'a, T> Parser<'a, T>
         where U: 'a
     {
         Parser(Box::new(move |input| {
-            let (input2, _) = try! { self.run(input) };
-            p.run(input2)
+            let (input2, _) = self.run(input)?;
+            let retry = input.pos == input2.pos;
+            p.run(input2).map_err(|ParseError {retry: _, message, pos}| {
+                ParseError {retry, message, pos}
+            })
         }))
     }
 
@@ -264,7 +277,13 @@ impl <'a, T> Parser<'a, T>
     {
         Parser(Box::new(move |input| {
             match self.run(input) {
-                Ok((input2, v)) => p.run(input2).map(|(input3, _)| (input3, v)),
+                Ok((input2, v)) => {
+                    let retry = input.pos == input2.pos;
+                    p.run(input2).map(|(input3, _)| (input3, v))
+                        .map_err(|ParseError{retry: _, message, pos}| {
+                            ParseError {retry, message, pos}
+                        })
+                },
                 Err(e) => Err(e)
             }
         }))
@@ -281,8 +300,11 @@ impl <'a, T> Parser<'a, T>
         where U: 'a
     {
         Parser(Box::new(move |input| {
-            let (input2, o) = try!{ self.run(input) };
-            let (input3, o2) = try!{ p.run(input2) };
+            let (input2, o) = self.run(input)?;
+            let retry = input.pos == input2.pos;
+            let (input3, o2) = p.run(input2).map_err(|ParseError{retry: _, message, pos}| {
+                ParseError {retry, message, pos}
+            })?;
             Ok((input3, (o, o2)))
         }))
     }
@@ -299,8 +321,11 @@ impl <'a, T> Parser<'a, T>
               U: 'a
     {
         Parser(Box::new(move |input| {
-            let (input2, o) = try!{ self.run(input) };
-            let (input3, o2) = try!{ f().run(input2) };
+            let (input2, o) = self.run(input)?;
+            let retry = input.pos == input2.pos;
+            let (input3, o2) = f().run(input2).map_err(|ParseError{retry: _, message, pos}| {
+                ParseError {retry, message, pos}
+            })?;
             Ok((input3, (o, o2)))
         }))
     }
@@ -317,7 +342,7 @@ impl <'a, T> Parser<'a, T>
         Parser(Box::new(move |input| {
             match self.run(input) {
                 Ok(o) => Ok(o),
-                Err(ParseError {retry, message: _}) if retry => that.run(input),
+                Err(ParseError {retry: true, ..}) => that.run(input),
                 Err(e) => Err(e)
             }
         }))
@@ -335,7 +360,7 @@ impl <'a, T> Parser<'a, T>
         Parser(Box::new(move |input| {
             match self.run(input) {
                 Ok(o) => Ok(o),
-                Err(ParseError {retry, message: _}) if retry => that().run(input),
+                Err(ParseError {retry: true, ..}) => that().run(input),
                 Err(e) => Err(e)
             }
         }))
@@ -362,13 +387,12 @@ impl <'a, T> Parser<'a, T>
     ///
     /// ```
     /// # use toyjq::parsercombinator::*;
-    /// assert!(string("foo").or(string("bar")).parse("bar").is_err());
-    /// assert_eq!(string("foo").try().or(string("bar")).parse("bar").unwrap(), "bar");
+    /// assert_eq!(string("foo").or(string("bar")).parse("bar").unwrap(), "bar");
     /// ```
     pub fn try(self) -> Parser<'a, T> {
         Parser(Box::new(move |input| {
-            self.run(input).map_err(|ParseError {retry: _, message}| {
-                ParseError {retry: true, message}
+            self.run(input).map_err(|ParseError {message, ..}| {
+                ParseError {retry: true, message, pos: input.pos}
             })
         }))
     }
@@ -389,7 +413,8 @@ impl <'a, T> Parser<'a, T>
                         v.push(o);
                         i = input2;
                     },
-                    Err(_) => break
+                    Err(ParseError {retry: true, ..}) => break,
+                    Err(e) => return Err(e)
                 }
             }
             Ok((i, v))
@@ -408,17 +433,27 @@ impl <'a, T> Parser<'a, T>
         Parser(Box::new(move |input| {
             let mut v = vec![];
             let mut i = input;
+            match self.run(input) {
+                Ok((input2, o)) => {
+                    v.push(o);
+                    i = input2;
+                },
+                Err(_) => return Ok((i, v))
+            }
             loop {
-                match self.run(i) {
-                    Ok((input2, o)) => {
-                        v.push(o);
-                        i = input2;
-                        match delim.run(i) {
-                            Ok((input3, _)) => i = input3,
-                            Err(_) => break
+                match delim.run(i) {
+                    Ok((input3, _)) => {
+                        i = input3;
+                        match self.run(i) {
+                            Ok((input4, o)) => {
+                                v.push(o);
+                                i = input4
+                            },
+                            Err(e) => return Err(e)
                         }
                     },
-                    Err(_) => break
+                    Err(ParseError {retry: true, ..}) => break,
+                    Err(e) => return Err(e)
                 }
             }
             Ok((i, v))
@@ -426,7 +461,7 @@ impl <'a, T> Parser<'a, T>
     }
 
     pub fn with_spaces(self) -> Self {
-        chr(' ').many().then(self).skip(chr(' ').many())
+        chr(' ').many().then(self).skip(chr(' ').many()).try()
     }
 
 }
