@@ -438,7 +438,8 @@ impl <'a, T> Parser<'a, T>
                     v.push(o);
                     i = input2;
                 },
-                Err(_) => return Ok((i, v))
+                Err(ParseError {retry: true, ..}) => return Ok((i, v)),
+                Err(e) => return Err(e),
             }
             loop {
                 match delim.run(i) {
@@ -461,7 +462,9 @@ impl <'a, T> Parser<'a, T>
     }
 
     pub fn with_spaces(self) -> Self {
-        chr(' ').many().then(self).skip(chr(' ').many()).try()
+        let ws = or_from(" \n\t".chars().map(chr));
+        let ws2 = or_from(" \n\t".chars().map(chr));
+        ws.many().then(self).skip(ws2.many()).try()
     }
 
 }

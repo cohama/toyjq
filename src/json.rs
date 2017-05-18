@@ -52,7 +52,7 @@ fn parse_jnumber<'a>() -> Parser<'a, Json<'a>> {
 }
 
 fn parse_string<'a>() -> Parser<'a, &'a str> {
-    chr('"').try().then_lazy(||until("\"")).skip(chr('"'))
+    chr('"').then_lazy(||until("\"")).skip(chr('"'))
 }
 
 fn parse_jstring<'a>() -> Parser<'a, Json<'a>> {
@@ -64,13 +64,13 @@ fn parse_keyvalue<'a>() -> Parser<'a, (&'a str, Json<'a>)> {
 }
 
 fn parse_jobject<'a>() -> Parser<'a, Json<'a>> {
-    chr('{').with_spaces().try().then_lazy(||
+    chr('{').with_spaces().then_lazy(||
         parse_keyvalue().sep_by(chr(',').with_spaces())
     ).skip(chr('}').with_spaces()).map(|v|Json::JObject(v.into_iter().collect()))
 }
 
 fn parse_jarray<'a>() -> Parser<'a, Json<'a>> {
-    chr('[').with_spaces().try().then_lazy(||
+    chr('[').with_spaces().then_lazy(||
         parse_json().sep_by(chr(',').with_spaces())
     ).skip(chr(']').with_spaces()).map(Json::JArray)
 }
@@ -252,7 +252,16 @@ mod tests {
             })
         }
         assert_eq! {
-            Json::from_str("[{\"key1\" : 123, \"key2\" : \"foo\"}, 123, [\"foo\", true]]").unwrap(),
+            Json::from_str(r#"
+[
+    {
+        "key1" : 123,
+        "key2" : "foo"
+    },
+    123,
+    ["foo", true]
+]
+"#).unwrap(),
             Json::JArray(vec! {
                 Json::JObject(vec! {
                     ("key1", Json::JNumber(123f64)),
